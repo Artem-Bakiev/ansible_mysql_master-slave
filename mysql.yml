@@ -1,0 +1,7 @@
+---
+- name: Setup MySQL 
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - role: mysql

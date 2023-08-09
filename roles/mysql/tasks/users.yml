@@ -1,0 +1,8 @@
+---
+- name: Create MySQL user
+  community.mysql.mysql_user:
+    name: '{{ db_user }}'
+    password: '{{ db_pass }}'
+    priv: '{{ db_name }}.*:ALL'
+    state: present
+  when: db_user is defined and db_pass is defined and db_name is defined

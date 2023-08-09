@@ -1,0 +1,42 @@
+---
+- name: Install mysql packages
+  ansible.builtin.apt:
+    name:
+      - mysql-server
+      - python3-pymysql
+    update_cache: true
+    state: present
+
+- name: Change root user password
+  community.mysql.mysql_user:
+    login_unix_socket: "/var/run/mysqld/mysqld.sock"
+    name: "root"
+    password: "{{ root_password }}"
+    host: localhost
+    state: present
+  notify:
+    - Restart MySQL service
+
+- name: Create .my.cnf for root
+  ansible.builtin.template:
+    src: root.my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: u=rw,g=,o=
+
+  # Configure MySQL.
+- name: Configure database
+  ansible.builtin.include_tasks: database.yml
+  when: inventory_hostname in groups['it-project-db-1_srv_main']
+- name: Create users
+  ansible.builtin.include_tasks: users.yml
+  when: inventory_hostname in groups['it-project-db-1_srv_main']
+
+  # Configure replication
+- name: Set replication role
+  ansible.builtin.set_fact:
+    db_role: "{{ 'master' if inventory_hostname in groups['it-project-db-1_srv_main'] else 'slave' }}"
+- name: Configure replication
+  ansible.builtin.include_tasks: replication.yml
+  when: master_slave_install | default('false') | bool

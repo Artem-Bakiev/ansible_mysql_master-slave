@@ -1,0 +1,35 @@
+---
+- name: Create replication user on master
+  community.mysql.mysql_user:
+    name: replication_user
+    password: "{{ replication_password }}"
+    login_user: root
+    login_password: "{{ root_password }}"
+    priv: "*.*:REPLICATION SLAVE"
+    host: "%"
+  when: db_role == 'master'
+
+- name: Copy the mysqld.cnf file on master
+  ansible.builtin.template:
+    src: "mysqld-master.cnf.j2"
+    dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+  notify:
+   - Restart MySQL service
+  when: db_role == 'master'
+
+- name: Configure MySQL replication on slaves
+  community.mysql.mysql_replication:
+    mode: changeprimary
+    master_host: "{{ master_server_ip }}"
+    master_user: replication_user
+    master_password: "{{ replication_password }}"
+    master_port: 3306
+  when: db_role == 'slave'
+
+- name: Copy the mysqld.cnf file on slave
+  ansible.builtin.template:
+    src: "mysqld-slave.cnf.j2"
+    dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+  notify:
+   - Restart MySQL service
+  when: db_role == 'slave'
